@@ -80,35 +80,58 @@ def assign_values_to_columns(line, col_edges, max_dist=15):
     return [values[c] for c in COL_LETTERS]
 
 
-def parse_forms(text):
+class ParseError(Exception):
+    pass
+
+
+def parse_forms(text, source="(unknown)"):
     pages = text.split("\f")
+    if len(pages) != 1:
+        raise ParseError(
+            f"{source}: expected a single-page PDF but found {len(pages)} pages."
+        )
 
-    for page in pages:
-        lines = page.split("\n")
+    lines = pages[0].split("\n")
 
-        col_edges = find_col_right_edges(lines)
-        if not col_edges:
+    col_edges = find_col_right_edges(lines)
+    if not col_edges:
+        raise ParseError(
+            f"{source}: could not find column headers "
+            f"(Col. A through Col. F). Is this a Wisconsin SOA form?"
+        )
+
+    mun_type, mun_name, county = parse_municipality_header(lines)
+    if not mun_type:
+        raise ParseError(
+            f"{source}: could not find municipality header "
+            f"(FOR TOWN/VILLAGE/CITY OF ...)."
+        )
+
+    found_lines = set()
+    rows = []
+    for line in lines:
+        m = re.match(r"\s+(\d)\s{2,}", line)
+        if not m:
+            continue
+        line_no = int(m.group(1))
+        if not (1 <= line_no <= 9):
             continue
 
-        mun_type, mun_name, county = parse_municipality_header(lines)
-        if not mun_type:
-            continue
+        text_after = line[m.end():]
+        cm = re.match(r"(.*?-\s*(?:Class\s+\d+\w*|ALL COLUMNS))", text_after)
+        class_name = cm.group(1).strip() if cm else text_after.strip()
 
-        for line in lines:
-            m = re.match(r"\s+(\d)\s{2,}", line)
-            if not m:
-                continue
-            line_no = int(m.group(1))
-            if not (1 <= line_no <= 9):
-                continue
+        values = assign_values_to_columns(line, col_edges)
+        found_lines.add(line_no)
+        rows.append([mun_type, mun_name, county, str(line_no), class_name] + values)
 
-            text_after = line[m.end():]
-            cm = re.match(r"(.*?-\s*(?:Class\s+\d+\w*|ALL COLUMNS))", text_after)
-            class_name = cm.group(1).strip() if cm else text_after.strip()
+    if found_lines != set(range(1, 10)):
+        missing = sorted(set(range(1, 10)) - found_lines)
+        raise ParseError(
+            f"{source}: missing data lines {missing}. Expected lines 1-9."
+        )
 
-            values = assign_values_to_columns(line, col_edges)
-
-            yield [mun_type, mun_name, county, str(line_no), class_name] + values
+    return rows
 
 
 def main():
@@ -116,19 +139,26 @@ def main():
         print(f"Usage: {sys.argv[0]} <pdf_file> [pdf_file ...]", file=sys.stderr)
         sys.exit(1)
 
-    writer = csv.writer(sys.stdout)
-    writer.writerow(HEADER)
-
+    all_rows = []
     for path in sys.argv[1:]:
         if not os.path.exists(path):
-            print(f"Warning: {path} not found, skipping", file=sys.stderr)
-            continue
+            print(f"Error: {path} not found", file=sys.stderr)
+            sys.exit(1)
         try:
             text = extract_text(path)
-            for row in parse_forms(text):
-                writer.writerow(row)
-        except Exception as e:
-            print(f"Error processing {path}: {e}", file=sys.stderr)
+        except Exception:
+            print(f"Error: {path} is not a valid PDF file.", file=sys.stderr)
+            sys.exit(1)
+        try:
+            all_rows.extend(parse_forms(text, source=path))
+        except ParseError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    writer = csv.writer(sys.stdout)
+    writer.writerow(HEADER)
+    for row in all_rows:
+        writer.writerow(row)
 
 
 if __name__ == "__main__":
