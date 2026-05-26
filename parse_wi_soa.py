@@ -4,14 +4,15 @@
 Extracts Lines 1-9 from Page 1 of each SOA form. Adds municipality header
 columns to each row. Accepts one or more PDF files as arguments.
 
-Requires: pdftotext (from poppler)
+Requires: pdfplumber
 """
 
 import csv
 import re
-import subprocess
 import sys
 import os
+
+import pdfplumber
 
 HEADER = [
     "Town/Village/City", "Municipality Name", "County Name",
@@ -25,13 +26,13 @@ COL_LETTERS = list("ABCDEF")
 
 
 def extract_text(pdf_path):
-    result = subprocess.run(
-        ["pdftotext", "-layout", str(pdf_path), "-"],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"pdftotext failed: {result.stderr}")
-    return result.stdout
+    with pdfplumber.open(pdf_path) as pdf:
+        pages = []
+        for page in pdf.pages:
+            text = page.extract_text(layout=True)
+            if text:
+                pages.append(text)
+        return "\f".join(pages)
 
 
 def find_col_right_edges(lines):
@@ -94,15 +95,16 @@ def parse_forms(text):
             continue
 
         for line in lines:
-            m = re.match(r"\s{1,5}(\d)\s{2,}", line)
+            m = re.match(r"\s+(\d)\s{2,}", line)
             if not m:
                 continue
             line_no = int(m.group(1))
             if not (1 <= line_no <= 9):
                 continue
 
-            name_end = col_edges["A"] - 15
-            class_name = line[m.end():name_end].strip()
+            text_after = line[m.end():]
+            cm = re.match(r"(.*?-\s*(?:Class\s+\d+\w*|ALL COLUMNS))", text_after)
+            class_name = cm.group(1).strip() if cm else text_after.strip()
 
             values = assign_values_to_columns(line, col_edges)
 
