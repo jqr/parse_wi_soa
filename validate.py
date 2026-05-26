@@ -36,9 +36,20 @@ def make_test_case(name, pdf_path, csv_path):
             self.assertEqual(len(self.actual_rows), len(self.expected_rows))
 
         def test_each_row_matches(self):
+            total_cells = 0
+            matched_cells = 0
+            mismatches = []
             for i, (actual, expected) in enumerate(zip(self.actual_rows, self.expected_rows)):
-                with self.subTest(line=i + 1):
-                    self.assertEqual(actual, expected)
+                for j, (a, e) in enumerate(zip(actual, expected)):
+                    total_cells += 1
+                    if a == e:
+                        matched_cells += 1
+                    else:
+                        col = HEADER[j] if j < len(HEADER) else f"col {j}"
+                        mismatches.append(f"  row {i+1}, {col}: got {a!r}, expected {e!r}")
+            if mismatches:
+                detail = "\n".join(mismatches)
+                self.fail(f"{matched_cells}/{total_cells} cells matched.\nMismatches:\n{detail}")
 
     Case.__name__ = Case.__qualname__ = f"Test_{name}"
     return Case
