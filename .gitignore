@@ -1,2 +1,8 @@
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc
+dist/
+build/
+*.spec
+*.exe

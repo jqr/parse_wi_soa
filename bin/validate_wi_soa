@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ $# -ne 1 ]; then
+  echo "Usage: bin/validate_wi_soa <directory-of-pdf-csv-pairs>" >&2
+  exit 1
+fi
+
+cd "$(dirname "$0")/.."
+python3 -c "
+import sys
+from validate import run_validations
+sys.exit(0 if run_validations(sys.argv[1]) else 1)
+" "$1"
