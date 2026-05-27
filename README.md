@@ -2,6 +2,17 @@
 
 Parse Wisconsin **Statement of Assessment** (SOA) PDF forms into CSV.
 
+![SOA form example](soa_example.png)
+
+&darr;
+
+| Town/Village/City | Municipality Name | County Name | Line No. | Real Estate | Col A | Col B | Col C | Col D | Col E | Col F |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Town | ADAMS | ADAMS | 1 | RESIDENTIAL - Class 1 | 1313 | 974 | 3018 | 37050000 | 156821200 | 193871200 |
+| Town | ADAMS | ADAMS | 2 | COMMERCIAL - Class 2 | 32 | 24 | 223 | 1161800 | 5131900 | 6293700 |
+| Town | ADAMS | ADAMS | 3 | MANUFACTURING - Class 3 | 2 | 1 | 15 | 70200 | 1053900 | 1124100 |
+| ... | | | | | | | | | | |
+
 Extracts Lines 1-9 (real estate classes) from each single-page form, including municipality header fields.
 
 On Unix-like systems (macOS, Linux), it runs as a Python CLI or GUI. On Windows, a standalone .exe provides the GUI with no dependencies — just double-click and go.
