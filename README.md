@@ -136,7 +136,3 @@ The build script then runs PyInstaller inside a container to bundle everything i
 **api-ms-win-crt-\*.dll warnings.** PyInstaller reports dozens of warnings about unresolved `api-ms-win-crt-*.dll` dependencies. These are Windows Universal CRT DLLs that are part of every modern Windows installation (Windows 10+) and don't need to be bundled. The warnings are harmless.
 
 **cryptography DLL load failure.** PyInstaller warns about `ImportError: DLL load failed while importing _rust` from the cryptography package (a transitive dependency via pdfminer). This only affects the OpenSSL backend which is not used at runtime by pdfplumber. The warning is harmless.
-
-## License
-
-MIT
