@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+IMAGE="parse-wi-soa-builder"
+
+echo "=== Building Docker image (cached after first run) ==="
+docker build --platform linux/amd64 -t "$IMAGE" .
+
+echo ""
+echo "=== Building Windows .exe with PyInstaller ==="
+docker run --rm --platform linux/amd64 \
+    -v "$(pwd):/src" \
+    "$IMAGE" \
+    bash -c '
+        rm -rf /src/dist/parse_wi_soa.exe /src/build/ /src/parse_wi_soa.spec
+        mkdir -p /root/.wine/drive_c/src
+        cp /src/*.py /root/.wine/drive_c/src/
+        cd /root/.wine/drive_c/src
+        Xvfb :99 -screen 0 1024x768x24 &
+        export DISPLAY=:99
+        sleep 1
+        wine C:/Python311/python.exe -m PyInstaller \
+            --onefile --windowed --name parse_wi_soa \
+            --log-level INFO \
+            gui.py
+        mkdir -p /src/dist
+        cp dist/parse_wi_soa.exe /src/dist/
+        chmod 666 /src/dist/parse_wi_soa.exe
+    '
+
+rm -rf build/ parse_wi_soa.spec
+
+echo ""
+echo "=== Done ==="
+ls -lh dist/parse_wi_soa.exe
