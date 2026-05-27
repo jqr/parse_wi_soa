@@ -47,7 +47,7 @@ Opens a tkinter window with two tabs:
 
 ### Windows .exe
 
-A standalone `parse_wi_soa.exe` (no Python install required) can be built for Windows. See [Building the Windows .exe](#building-the-windows-exe) below.
+Download `parse_wi_soa.exe` from the [releases page](https://github.com/jqr/parse_wi_soa/releases) — no Python install required. See [Building the Windows .exe](#building-the-windows-exe) if you want to build it yourself.
 
 ### Output columns
 
