@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+FORCE=false
+if [ "${1:-}" = "--force" ]; then
+  FORCE=true
+fi
+
+YEARS=(2023 2024 2025)
+COUNTIES=(
+  ADAMS ASHLAND BARRON BAYFIELD BROWN BUFFALO BURNETT CALUMET CHIPPEWA
+  CLARK COLUMBIA CRAWFORD DANE DODGE DOOR DOUGLAS DUNN EAUCLAIRE FLORENCE
+  FONDDULAC FOREST GRANT GREEN GREENLAKE IOWA IRON JACKSON JEFFERSON
+  JUNEAU KENOSHA KEWAUNEE LACROSSE LAFAYETTE LANGLADE LINCOLN MANITOWOC
+  MARATHON MARINETTE MARQUETTE MENOMINEE MILWAUKEE MONROE OCONTO ONEIDA
+  OUTAGAMIE OZAUKEE PEPIN PIERCE POLK PORTAGE PRICE RACINE RICHLAND ROCK
+  RUSK SAUK SAWYER SHAWANO SHEBOYGAN STCROIX TAYLOR TREMPEALEAU VERNON
+  VILAS WALWORTH WASHBURN WASHINGTON WAUKESHA WAUPACA WAUSHARA WINNEBAGO
+  WOOD
+)
+
+BASE_URL="https://www.revenue.wi.gov/SLFReportscotvc"
+
+is_valid_pdf() {
+  [ -f "$1" ] && head -c 5 "$1" | grep -q '%PDF-'
+}
+
+total=0
+for year in "${YEARS[@]}"; do
+  dir="data/$year"
+  mkdir -p "$dir"
+  downloaded=0
+  cached=0
+  printf "%s: " "$year"
+  for county in "${COUNTIES[@]}"; do
+    file="$dir/${year}SOA${county}.PDF"
+    if [ "$FORCE" = false ] && is_valid_pdf "$file"; then
+      printf "."
+      cached=$((cached + 1))
+      continue
+    fi
+    curl -sf "$BASE_URL/${year}SOA${county}.PDF" -o "$file.tmp"
+    if is_valid_pdf "$file.tmp"; then
+      mv "$file.tmp" "$file"
+      printf "."
+      downloaded=$((downloaded + 1))
+    else
+      rm -f "$file.tmp"
+      printf "x"
+    fi
+  done
+  printf " %d downloaded, %d cached.\n" "$downloaded" "$cached"
+  total=$((total + downloaded))
+done
+
+echo ""
+echo "$(find data -name '*.PDF' | wc -l | tr -d ' ') PDFs in data/"
