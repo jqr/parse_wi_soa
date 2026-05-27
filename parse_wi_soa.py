@@ -84,15 +84,7 @@ class ParseError(Exception):
     pass
 
 
-def parse_forms(text, source="(unknown)"):
-    pages = text.split("\f")
-    if len(pages) != 1:
-        raise ParseError(
-            f"{source}: expected a single-page PDF but found {len(pages)} pages."
-        )
-
-    lines = pages[0].split("\n")
-
+def parse_page(lines, source="(unknown)"):
     col_edges = find_col_right_edges(lines)
     if not col_edges:
         raise ParseError(
@@ -132,6 +124,26 @@ def parse_forms(text, source="(unknown)"):
         )
 
     return rows
+
+
+def is_soa_page(lines):
+    return find_col_right_edges(lines) and parse_municipality_header(lines)[0]
+
+
+def parse_forms(text, source="(unknown)"):
+    pages = text.split("\f")
+    all_rows = []
+    for i, page in enumerate(pages):
+        lines = page.split("\n")
+        if not is_soa_page(lines):
+            continue
+        page_source = f"{source} (page {i+1})" if len(pages) > 1 else source
+        all_rows.extend(parse_page(lines, source=page_source))
+    if not all_rows:
+        raise ParseError(
+            f"{source}: no SOA forms found."
+        )
+    return all_rows
 
 
 def main():

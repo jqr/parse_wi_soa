@@ -17,18 +17,18 @@ class TestParseErrors(unittest.TestCase):
     def test_not_an_soa_form(self):
         with self.assertRaises(ParseError) as ctx:
             parse_forms("just some random text")
-        self.assertIn("column headers", str(ctx.exception))
+        self.assertIn("no SOA forms found", str(ctx.exception))
 
-    def test_multi_page_rejected(self):
+    def test_multi_page_non_soa_skipped(self):
         with self.assertRaises(ParseError) as ctx:
             parse_forms("page one\fpage two")
-        self.assertIn("single-page", str(ctx.exception))
+        self.assertIn("no SOA forms found", str(ctx.exception))
 
     def test_missing_municipality_header(self):
         header_line = "  ".join(f"(Col. {c})" for c in "ABCDEF")
         with self.assertRaises(ParseError) as ctx:
             parse_forms(f"STATEMENT OF ASSESSMENT\n{header_line}")
-        self.assertIn("municipality header", str(ctx.exception))
+        self.assertIn("no SOA forms found", str(ctx.exception))
 
     def test_source_appears_in_error(self):
         with self.assertRaises(ParseError) as ctx:
